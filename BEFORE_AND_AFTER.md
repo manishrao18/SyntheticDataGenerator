@@ -269,7 +269,7 @@ Israel Factory Example:
 - Biometric Data: ✓
 - Social Media Profiles: ✓
 
-ALL 33 FIELDS COMPLETE FOR ALL 18 COUNTRIES ✓
+ALL 38+ FIELDS COMPLETE FOR ALL 18 COUNTRIES ✓
 ```
 
 ---

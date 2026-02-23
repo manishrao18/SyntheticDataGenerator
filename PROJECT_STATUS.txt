@@ -111,7 +111,7 @@
   Data Generation:
   ─────────────────────────────────────────────────────────────────────────
   • 1,800 realistic PII records (100 per country × 18 countries)
-  • All 33 fields populated for every record
+  • All 38+ fields populated for every record
   • ~2.5 seconds generation time
   • ~720 records per second throughput
 

@@ -82,7 +82,7 @@ python NarrativeStoryDataBuilder.py
 Total:            1,800 records
 Countries:        18
 Time:             ~2.5 seconds
-Fields:           All 33 fields complete
+Fields:           All 38+ fields complete
 Data Quality:     HIGH - Ready for use
 ```
 

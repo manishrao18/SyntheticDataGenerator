@@ -44,7 +44,7 @@ Generated synthetic PII data is now **significantly more realistic** with proper
 | **Medical Cond.** | 80-100% affected | 15% affected | 85% healthy |
 | **Disabilities** | Too common | Realistic prevalence | Proper representation |
 | **Addresses** | Broken formatting | Clean single-line | Professional quality |
-| **Data Fields** | Some missing | All 33 fields complete | Comprehensive PII |
+| **Data Fields** | Some missing | All 38+ fields complete | Comprehensive PII |
 
 ---
 
@@ -71,17 +71,18 @@ Saudi Arabia     |  UAE            |  Indonesia
 Malaysia         |  Singapore      |  Hong Kong
 ```
 
-### All 33 Fields Present
+### All 38+ Fields Present
 ```
-Demographics: Country, Full Name, Birthdate, Gender, Marital Status, Race_Ethnicity
+Demographics: Country, Full Name, Birthdate, Gender, Age, Marital Status
 Identification: National ID, Driving License, Passport, Tax ID
-Financial: Bank Account, Credit Card
+Financial: Bank Account, Credit Card, Annual Income, Net Worth, Income Group, Income Sources, Credit Score
 Medical: Blood Group, Medical Condition, Disability
 Physical: Height, Eye Color, Skin Tone, Hair Color, Weight
 Contact: Address, Work Address, Mobile, Landline, Email
 Technical: IP Address, MAC Address, Biometric Data
-Professional: Job Title, Workplace, Education Level
-Documents: Vehicle Registration, Social Media Profiles
+Professional: Job Title, Workplace, Education Level, Work Type
+Family & Lifestyle: Number of Kids, Family Members Count, Hobbies, Personal Vehicle Count
+Status Indicators: Is Elderly, Is Dependent, Is Main Earner, Is Co-Earner, Marriage Count
 ```
 
 ---
@@ -189,7 +190,7 @@ success = gen.export_csv(100)  # Change 100 to desired records per country
 - Realistic disability prevalence
 
 ### 5. Complete Coverage
-- All 33 fields present for every record
+- All 38+ fields present for every record
 - All 18 countries supported
 - All field types included
 
@@ -261,7 +262,7 @@ All improvements are documented in:
 ## ✅ Verification Checklist
 
 - [x] All 18 countries supported
-- [x] All 33 fields present and populated
+- [x] All 38+ fields present and populated
 - [x] Name-gender consistency (100%)
 - [x] Age-marital logic (90%+)
 - [x] Height-weight correlation (95%+)

@@ -120,6 +120,41 @@ def build_story(row: pd.Series) -> str:
     else:
         pov = random.choices(["third", "first", "second"], weights=[70, 20, 10], k=1)[0]
 
+    # Tone selection: allow CSV override via `Tone` column, else choose randomly for variety
+    tone = None
+    if "Tone" in row and pd.notna(row["Tone"]) and str(row["Tone"]).strip():
+        tone = str(row["Tone"]).strip().lower()
+    else:
+        # small fraction formal, majority neutral/informal for variety
+        tone = random.choices(["formal", "informal", "neutral"], weights=[15, 60, 25], k=1)[0]
+
+    # Tone-adjusted phrase maps
+    if tone == "formal":
+        greeting_first = "Hello, my name is"
+        work_verb_third = "is employed as"
+        work_verb_other = "work as"
+        base_life_phrase = "leads a life characterized by numerous details."
+        id_prefix_map = {"first": "My key identity documents include", "second": "Your key identity documents include", "third": "Key identity documents include"}
+        contact_template = {"first": "I can be contacted via {0}.", "second": "You can be contacted via {0}.", "third": "Can be contacted via {0}."}
+        financial_intro = "Financially,"
+    elif tone == "informal":
+        greeting_first = "Hi, I'm"
+        work_verb_third = "works as"
+        work_verb_other = "work as"
+        base_life_phrase = "gets by with a bunch of everyday details."
+        id_prefix_map = {"first": "My docs include", "second": "Your docs include", "third": "Some documents include"}
+        contact_template = {"first": "You can reach me at {0}.", "second": "You can reach {1} at {0}.", "third": "They can be reached via {0}."}
+        financial_intro = "Money-wise,"
+    else:
+        # neutral
+        greeting_first = "Hello, I'm"
+        work_verb_third = "works as"
+        work_verb_other = "work as"
+        base_life_phrase = "leads a life shaped by many details."
+        id_prefix_map = {"first": "My key documents include", "second": "Your key documents include", "third": "Key documents include"}
+        contact_template = {"first": "I can be reached via {0}.", "second": "You can be reached via {0}.", "third": "Can be reached via {0}."}
+        financial_intro = "Financially,"
+
     use_name = True
     if pov != "third":
         use_name = False
@@ -162,23 +197,23 @@ def build_story(row: pd.Series) -> str:
     if pov == "first":
         # Self-introduction for first-person POV (include honorific when available)
         if hon and clean_name:
-            lead_bits.append(f"Hi, I'm {hon} {clean_name}.")
+            lead_bits.append(f"{greeting_first} {hon} {clean_name}.")
         elif clean_name:
-            lead_bits.append(f"Hi, I'm {clean_name}.")
+            lead_bits.append(f"{greeting_first} {clean_name}.")
         elif display_name:
-            lead_bits.append(f"Hi, I'm {display_name}.")
+            lead_bits.append(f"{greeting_first} {display_name}.")
         else:
-            lead_bits.append("Hi, I'm someone.")
+            lead_bits.append(f"{greeting_first} someone.")
 
         if title and workplace and country:
-            lead_bits.append(f"I work as {a_or_an(title)} {fmt(title)} at {fmt(workplace)} in {fmt(country)}.")
+            lead_bits.append(f"I {work_verb_other} {a_or_an(title)} {fmt(title)} at {fmt(workplace)} in {fmt(country)}.")
         elif title and workplace:
-            lead_bits.append(f"I work as {a_or_an(title)} {fmt(title)} at {fmt(workplace)}.")
+            lead_bits.append(f"I {work_verb_other} {a_or_an(title)} {fmt(title)} at {fmt(workplace)}.")
         elif title and country:
             lead_bits.append(f"I am {a_or_an(title)} {fmt(title)} based in {fmt(country)}.")
         else:
             base_loc = f" in {fmt(country)}" if country else ""
-            lead_bits.append(f"I{base_loc} lead a life shaped by many details.")
+            lead_bits.append(f"I{base_loc} {base_life_phrase}")
 
     elif pov == "second":
         # Second-person uses honorifics/name mention when available
@@ -190,26 +225,26 @@ def build_story(row: pd.Series) -> str:
             person_ref = display_name
 
         if title and workplace and country:
-            lead_bits.append(f"You, {person_ref}, work as {a_or_an(title)} {fmt(title)} at {fmt(workplace)} in {fmt(country)}.")
+            lead_bits.append(f"You, {person_ref}, {work_verb_other} {a_or_an(title)} {fmt(title)} at {fmt(workplace)} in {fmt(country)}.")
         elif title and workplace:
-            lead_bits.append(f"You, {person_ref}, work as {a_or_an(title)} {fmt(title)} at {fmt(workplace)}.")
+            lead_bits.append(f"You, {person_ref}, {work_verb_other} {a_or_an(title)} {fmt(title)} at {fmt(workplace)}.")
         elif title and country:
             lead_bits.append(f"You, {person_ref}, are {a_or_an(title)} {fmt(title)} based in {fmt(country)}.")
         else:
             base_loc = f" in {fmt(country)}" if country else ""
-            lead_bits.append(f"You, {person_ref}{base_loc}, lead a life shaped by many details.")
+            lead_bits.append(f"You, {person_ref}{base_loc}, {base_life_phrase}")
 
     else:
         if title and workplace and country:
-            lead_bits.append(f"{display_name} works as {a_or_an(title)} {fmt(title)} at {fmt(workplace)} in {fmt(country)}.")
+            lead_bits.append(f"{display_name} {work_verb_third} {a_or_an(title)} {fmt(title)} at {fmt(workplace)} in {fmt(country)}.")
         elif title and workplace:
-            lead_bits.append(f"{display_name} works as {a_or_an(title)} {fmt(title)} at {fmt(workplace)}.")
+            lead_bits.append(f"{display_name} {work_verb_third} {a_or_an(title)} {fmt(title)} at {fmt(workplace)}.")
         elif title and country:
             lead_bits.append(f"{display_name} is {a_or_an(title)} {fmt(title)} based in {fmt(country)}.")
         else:
             # Fallback
             base_loc = f" in {fmt(country)}" if country else ""
-            lead_bits.append(f"{display_name}{base_loc} leads a life shaped by many details.")
+            lead_bits.append(f"{display_name}{base_loc} {base_life_phrase}")
 
     # Identity & demographics
     id_parts = []
@@ -284,6 +319,8 @@ def build_story(row: pd.Series) -> str:
         else:
             prefix = "Key documents include"
 
+        # Use tone-aware prefix
+        prefix = id_prefix_map.get(pov, "Key documents include")
         if len(ids_bits) == 1:
             lead_bits.append(f"{prefix} {ids_bits[0]}.")
         else:
@@ -307,7 +344,15 @@ def build_story(row: pd.Series) -> str:
         if email:  contact_parts.append(f"email {fmt(email)}")
         # Use coordinating conjunction "or" for contact channels
         reach_method = " or ".join(contact_parts)
-        lead_bits.append(f"{sub.capitalize()} can be reached via {reach_method}.")
+        # Tone-aware contact phrasing
+        person_ref = f"{hon} {clean_name}".strip() if hon else (clean_name or display_name)
+        if pov == 'first':
+            lead_bits.append(contact_template['first'].format(reach_method))
+        elif pov == 'second':
+            # some informal templates expect the person's name as second arg
+            lead_bits.append(contact_template['second'].format(reach_method, person_ref))
+        else:
+            lead_bits.append(contact_template['third'].format(reach_method))
 
     if ip or mac:
         tech_parts = []
@@ -366,7 +411,7 @@ def build_story(row: pd.Series) -> str:
         fin_parts.append(f"enjoys {fmt(hobbies)}")
     
     if fin_parts:
-        lead_bits.append("Financially, " + "; ".join(fin_parts) + ".")
+        lead_bits.append(f"{financial_intro} " + "; ".join(fin_parts) + ".")
 
     # Household / family / roles
     hh_parts = []
