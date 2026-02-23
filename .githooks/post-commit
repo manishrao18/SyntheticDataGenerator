@@ -1,0 +1,14 @@
+#!/bin/sh
+# Git hook: run backup_code.py after each commit
+# This script tries python, python3, then pwsh if available.
+
+# Run from repository root
+if command -v python >/dev/null 2>&1; then
+  python ./backup_code.py || true
+elif command -v python3 >/dev/null 2>&1; then
+  python3 ./backup_code.py || true
+else
+  if command -v pwsh >/dev/null 2>&1; then
+    pwsh -Command "& { python ./backup_code.py }" || true
+  fi
+fi
