@@ -198,6 +198,25 @@ The following files have been removed to maintain a clean repository:
 ### 📦 Essential Files Only
 This repository now contains only:
 - Production Python code
+
+---
+
+**Generated Outputs (Local Only)**
+
+- The following generated files are intended for local experimentation and are NOT tracked in this repository:
+	- `synthetic_pii_data.csv`, `crime_dataset.csv`, `crime_narratives.txt`, `narrative_stories.txt`
+- These files are included in `.gitignore` and will not be pushed to GitHub.
+- If you need to share large datasets, use Git LFS or an external storage service (S3, Google Drive, etc.). Example `.gitattributes` entry to enable LFS for CSV/TXT files:
+
+	*.csv filter=lfs diff=lfs merge=lfs -text
+	*.txt filter=lfs diff=lfs merge=lfs -text
+
+- NOTE: A history rewrite was performed to remove these files from the repository history. If you have a local clone from before this rewrite, please re-clone or reset your local branch:
+
+	git fetch origin
+	git reset --hard origin/main
+
+If you prefer, you can keep local generated files but avoid committing them.
 - Generated synthetic data and narratives
 - Comprehensive documentation
 
