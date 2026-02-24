@@ -60,12 +60,12 @@ def build_crime_narrative(row: pd.Series) -> str:
     
     suspect_age = get("Suspect Age")
     suspect_gender = fmt(get("Suspect Gender") or "Unknown Gender")
-    suspect_race = fmt(get("Suspect Race") or "Unknown Ethnicity")
+    suspect_race = fmt(get("Suspect Race/Ethnicity") or get("Suspect Race") or "Unknown Ethnicity")
     suspect_pronouns = gender_pronouns(suspect_gender)
     
     victim_age = get("Victim Age")
     victim_gender = fmt(get("Victim Gender") or "Unknown Gender")
-    victim_race = fmt(get("Victim Race") or "Unknown Ethnicity")
+    victim_race = fmt(get("Victim Race/Ethnicity") or get("Victim Race") or "Unknown Ethnicity")
     victim_occ = fmt(get("Victim Occupation") or "Resident")
     victim_pronouns = gender_pronouns(victim_gender)
     
@@ -94,7 +94,11 @@ def build_crime_narrative(row: pd.Series) -> str:
     
     # Case Header
     narrative_parts.append(f"CASE REPORT - {crime_type.upper()}")
-    narrative_parts.append(f"Case ID: CR-{date.replace('-', '')}-{random.randint(1000, 9999)}")
+    case_file_no = fmt(get("Case File Number") or get("CaseFileNumber") or "")
+    if case_file_no:
+        narrative_parts.append(f"Case File Number: {case_file_no}")
+    else:
+        narrative_parts.append(f"Case ID: CR-{date.replace('-', '')}-{random.randint(1000, 9999)}")
     narrative_parts.append(f"Report Date: {datetime.now().strftime('%Y-%m-%d')}")
     narrative_parts.append(f"Jurisdiction: {city}, {state}, {country}")
     narrative_parts.append("")
@@ -105,7 +109,9 @@ def build_crime_narrative(row: pd.Series) -> str:
     narrative_parts.append(f"Time of Incident: {time}")
     narrative_parts.append(f"Location: {locality} ({location_type})")
     narrative_parts.append(f"Crime Classification: {crime_type}")
-    narrative_parts.append(f"Severity Level: {severity}")
+    # Use localized severity label name if provided by the dataset
+    severity_label_name = fmt(get("Severity Label Name") or "Severity Level")
+    narrative_parts.append(f"{severity_label_name}: {severity}")
     narrative_parts.append("")
     
     # Suspect Profile
@@ -217,8 +223,22 @@ def build_crime_narrative(row: pd.Series) -> str:
     else:
         narrative_parts.append(f"Suspect remains fugitive. Active manhunt underway.")
     
-    narrative_parts.append(f"Investigating Officer: Officer [ID: {random.randint(1000, 9999)}]")
-    narrative_parts.append(f"Department: {city} Police Department")
+    # Prefer country-specific officer/detective field
+    officer_name = get("Detective Assigned") or get("Officer In Charge") or get("Officer In-Charge") or None
+    officer_label = "Investigating Officer"
+    if "Detective Assigned" in row and pd.notna(row.get("Detective Assigned")):
+        officer_label = "Detective"
+    elif "Officer In Charge" in row or "Officer In-Charge" in row:
+        officer_label = "Officer In Charge"
+
+    if officer_name:
+        narrative_parts.append(f"{officer_label}: {fmt(officer_name)}")
+    else:
+        narrative_parts.append(f"{officer_label}: Officer [ID: {random.randint(1000, 9999)}]")
+
+    police_unit_label = fmt(get("Police Unit Label") or "Police Department")
+    police_unit_name = fmt(get("Police Unit Name") or f"{city} {police_unit_label}")
+    narrative_parts.append(f"{police_unit_label}: {police_unit_name}")
     narrative_parts.append("-" * 80)
     narrative_parts.append("")
     

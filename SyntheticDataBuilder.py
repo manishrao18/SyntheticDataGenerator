@@ -22,10 +22,24 @@
 
 import csv
 import random
+import re
 import logging
 import sys
 from abc import ABC, abstractmethod
 from faker import Faker
+from id_utils import (
+    generate_aadhaar, generate_sin, generate_nino, from_template, generate_passport,
+    generate_german_tin, generate_pak_cnic, generate_nigeria_nin, generate_codice_fiscale, generate_dni
+)
+
+# Monkey-patch Faker.bothify to use our from_template helper so existing bothify
+# calls in factories produce consistent, country-aware templates/checksum outputs.
+def _faker_bothify(self, text=None, **kwargs):
+    # Faker.bothify sometimes passes pattern as positional arg or as text=...
+    pattern = text if text is not None else kwargs.get('text') or ''
+    return from_template(pattern)
+
+Faker.bothify = _faker_bothify
 from datetime import datetime, timedelta
 
 # Configure logging
@@ -107,6 +121,23 @@ class PIIFactory(ABC):
         }
         return random.choice(job_by_education.get(education, self.fake.job()))
 
+    def _make_username(self, full_name: str) -> str:
+        """Create a plausible username based on the person's full name."""
+        parts = re.findall(r"[A-Za-z]+", full_name)
+        if not parts:
+            base = self.fake.user_name()
+        else:
+            first = parts[0].lower()
+            last = parts[-1].lower() if len(parts) > 1 else ''
+            choices = []
+            if last:
+                choices += [f"{first}.{last}", f"{first}{last}", f"{first[0]}{last}", f"{first}_{last}"]
+            choices += [f"{first}{random.randint(10,99)}", f"{first}{random.choice(['_',''])}{random.randint(100,999)}"]
+            base = random.choice(choices)
+        # normalize
+        base = re.sub(r'[^a-z0-9._]', '', base.lower())
+        return base
+
     def common_fields(self, country_name):
         """Generates standard fields applicable across all regions with realistic correlations."""
         full_name = self.fake.name()
@@ -149,6 +180,10 @@ class PIIFactory(ABC):
         if marital_status in ['Married', 'Divorced', 'Widowed']:
             marriage_count = random.choices(['First', 'Second'], weights=[85,15])[0]
         
+        username = self._make_username(full_name)
+        email_domain = random.choice(['gmail.com', 'hotmail.com', 'yahoo.com', 'outlook.com', 'example.com'])
+        social_platforms = random.sample(['facebook', 'twitter', 'linkedin', 'instagram'], k=2)
+
         return {
             'Country': country_name
             , 'Full Name': full_name
@@ -165,8 +200,8 @@ class PIIFactory(ABC):
             , 'Biometric Data': self.fake.sha256()
             , 'Medical Condition': medical_cond
             , 'Disability': disability
-            , 'Email': self.fake.free_email()
-            , 'Social Media Profiles': f"https://www.{random.choice(['facebook', 'twitter', 'linkedin', 'instagram'])}.com/{self.fake.user_name()}"
+            , 'Email': f"{username}@{email_domain}"
+            , 'Social Media Profiles': "; ".join([f"https://www.{p}.com/{username}" for p in social_platforms])
             , 'IP Address': self.fake.ipv4()
             , 'MAC Address': self.fake.mac_address()
             , 'Job Title': job_title
@@ -504,13 +539,13 @@ class AlbanianFactory(PIIFactory):
         data.update({
             'Birthdate': self._format_birthdate_from_date(data.pop('Birthdate_dt'), 'Albania'),
             'Race_Ethnicity': random.choice(['Albanian', 'Greek', 'Roma', 'Other']),
-            'National ID': self.fake.bothify("#########"),
-            'Tax ID': self.fake.bothify("#########"),
+            'National ID': from_template("#########"),
+            'Tax ID': from_template("#########"),
             'Bank Account': self.fake.iban(),
             'Credit Card': self.fake.credit_card_number(),
-            'Passport': self.fake.bothify("?########").upper(),
-            'Driving License': self.fake.bothify("AL#########"),
-            'Vehicle Registration': self.fake.bothify("AL-###-##").upper(),
+            'Passport': generate_passport('Albania'),
+            'Driving License': from_template("AL#########"),
+            'Vehicle Registration': from_template("AL-###-##").upper(),
             'Address': f"{self.fake.street_address()}, {self.fake.city()}, {self.fake.postcode()}",
             'Mobile': self.fake.phone_number(),
             'Landline': self.fake.phone_number(),
@@ -525,13 +560,13 @@ class IrishFactory(PIIFactory):
         data.update({
             'Birthdate': self._format_birthdate_from_date(data.pop('Birthdate_dt'), 'Ireland'),
             'Race_Ethnicity': random.choice(['Irish', 'Traveller', 'Other']),
-            'National ID': self.fake.bothify("#########"),
-            'Tax ID': self.fake.bothify("#########"),
+            'National ID': from_template("#########"),
+            'Tax ID': from_template("#########"),
             'Bank Account': self.fake.iban(),
             'Credit Card': self.fake.credit_card_number(),
-            'Passport': self.fake.bothify("?########").upper(),
-            'Driving License': self.fake.bothify("IE#########"),
-            'Vehicle Registration': self.fake.bothify("IE-###-##").upper(),
+            'Passport': generate_passport('Ireland'),
+            'Driving License': from_template("IE#########"),
+            'Vehicle Registration': from_template("IE-###-##").upper(),
             'Address': f"{self.fake.street_address()}, {self.fake.city()}, {self.fake.postcode()}",
             'Mobile': self.fake.phone_number(),
             'Landline': self.fake.phone_number(),
@@ -546,13 +581,13 @@ class NigerianFactory(PIIFactory):
         data.update({
             'Birthdate': self._format_birthdate_from_date(data.pop('Birthdate_dt'), 'Nigeria'),
             'Race_Ethnicity': random.choice(['Yoruba', 'Igbo', 'Hausa', 'Fulani', 'Other']),
-            'National ID': self.fake.bothify("#########"),
-            'Tax ID': self.fake.bothify("#########"),
+            'National ID': generate_nigeria_nin(),
+            'Tax ID': from_template('###########'),
             'Bank Account': self.fake.iban(),
             'Credit Card': self.fake.credit_card_number(),
-            'Passport': self.fake.bothify("?########").upper(),
-            'Driving License': self.fake.bothify("NG#########"),
-            'Vehicle Registration': self.fake.bothify("NG-###-##").upper(),
+            'Passport': generate_passport('Nigeria'),
+            'Driving License': from_template("NG#########"),
+            'Vehicle Registration': from_template("NG-###-##").upper(),
             'Address': f"{self.fake.street_address()}, {self.fake.city()}, {self.fake.postcode()}",
             'Mobile': self.fake.phone_number(),
             'Landline': self.fake.phone_number(),
@@ -567,13 +602,13 @@ class PortugueseFactory(PIIFactory):
         data.update({
             'Birthdate': self._format_birthdate_from_date(data.pop('Birthdate_dt'), 'Portugal'),
             'Race_Ethnicity': random.choice(['Portuguese', 'Brazilian', 'African', 'Other']),
-            'National ID': self.fake.bothify("#########"),
-            'Tax ID': self.fake.bothify("#########"),
+            'National ID': from_template("#########"),
+            'Tax ID': from_template("#########"),
             'Bank Account': self.fake.iban(),
             'Credit Card': self.fake.credit_card_number(),
-            'Passport': self.fake.bothify("?########").upper(),
-            'Driving License': self.fake.bothify("PT#########"),
-            'Vehicle Registration': self.fake.bothify("PT-###-##").upper(),
+            'Passport': generate_passport('Portugal'),
+            'Driving License': from_template("PT#########"),
+            'Vehicle Registration': from_template("PT-###-##").upper(),
             'Address': f"{self.fake.street_address()}, {self.fake.city()}, {self.fake.postcode()}",
             'Mobile': self.fake.phone_number(),
             'Landline': self.fake.phone_number(),
@@ -588,13 +623,13 @@ class SpanishFactory(PIIFactory):
         data.update({
             'Birthdate': self._format_birthdate_from_date(data.pop('Birthdate_dt'), 'Spain'),
             'Race_Ethnicity': random.choice(['Spanish', 'Catalan', 'Basque', 'Galician', 'Other']),
-            'National ID': self.fake.bothify("#########"),
+            'National ID': generate_dni(),
             'Tax ID': self.fake.bothify("#########"),
             'Bank Account': self.fake.iban(),
             'Credit Card': self.fake.credit_card_number(),
-            'Passport': self.fake.bothify("?########").upper(),
-            'Driving License': self.fake.bothify("ES#########"),
-            'Vehicle Registration': self.fake.bothify("ES-###-##").upper(),
+            'Passport': generate_passport('Spain'),
+            'Driving License': from_template("ES#########"),
+            'Vehicle Registration': from_template("ES-###-##").upper(),
             'Address': f"{self.fake.street_address()}, {self.fake.city()}, {self.fake.postcode()}",
             'Mobile': self.fake.phone_number(),
             'Landline': self.fake.phone_number(),
@@ -672,7 +707,7 @@ class UKFactory(PIIFactory):
         data.update({
             'Birthdate': self._format_birthdate_from_date(data.pop('Birthdate_dt'), 'UK')
             , 'Race_Ethnicity': random.choice(['White', 'Black', 'Asian', 'Mixed', 'Asian British', 'Black British', 'Other'])
-            , 'National ID': self.fake.bothify(random.choice(["?? ## ## ## A", "??-##-##-##-B"]).upper())
+            , 'National ID': generate_nino()
             , 'Tax ID': self.fake.bothify("###########")
             , 'Bank Account': self.fake.iban()
             , 'Credit Card': self.fake.credit_card_number()
@@ -693,12 +728,12 @@ class IndiaFactory(PIIFactory):
         data.update({
             'Birthdate': self._format_birthdate_from_date(data.pop('Birthdate_dt'), 'India')
             , 'Race_Ethnicity': random.choice(['Marathi', 'Gujarati', 'Rajasthani', 'North Indian', 'Telugu', 'Tamil', 'Kannada', 'Malayali', 'Bengali', 'Punjabi', 'Other'])
-            , 'National ID': self.fake.aadhaar_id()
-            , 'Tax ID': self.fake.bothify(text='?????####?').upper()
+            , 'National ID': generate_aadhaar()
+            , 'Tax ID': from_template('?????####?').upper()
             , 'Bank Account': self.fake.bban()
             , 'Credit Card': self.fake.credit_card_number()
-            , 'Passport': self.fake.bothify("?##############").upper()
-            , 'Driving License': self.fake.bothify("??-#############").upper()
+            , 'Passport': generate_passport('India')
+            , 'Driving License': from_template('??-#############').upper()
             , 'Vehicle Registration': self.fake.bothify("?? ## ?? ####").upper()
             , 'Address': f"{self.fake.street_address()}, {self.fake.city()}, {self.fake.state()} {self.fake.postcode()}"
             , 'Mobile': self.fake.phone_number()
@@ -714,8 +749,8 @@ class PakistanFactory(PIIFactory):
         data.update({
             'Birthdate': self._format_birthdate_from_date(data.pop('Birthdate_dt'), 'Pakistan')
             , 'Race_Ethnicity': random.choice(['Punjabi', 'Sindhi', 'Saraiki', 'Muhajir', 'Baloch', 'Pashtun', 'Other'])
-            , 'National ID': self.fake.bothify(text='#####-#######-#')
-            , 'Tax ID': self.fake.bothify(text='#####-#######-#').upper()
+            , 'National ID': generate_pak_cnic()
+            , 'Tax ID': generate_pak_cnic()
             , 'Bank Account': self.fake.iban()
             , 'Credit Card': self.fake.credit_card_number()
             , 'Passport': self.fake.bothify(text='?########').upper()
@@ -735,7 +770,7 @@ class CanadaFactory(PIIFactory):
         data.update({
             'Birthdate': self._format_birthdate_from_date(data.pop('Birthdate_dt'), 'Canada')
             , 'Race_Ethnicity': random.choice(['White', 'Black', 'Indigenous', 'Asian', 'Chinese', 'Indian', 'Other'])
-            , 'National ID': self.fake.bothify(text='###-###-###')
+            , 'National ID': generate_sin(formatted=True)
             , 'Tax ID': self.fake.bothify(text='###-###-###')
             , 'Bank Account': self.fake.numerify(text='#######')
             , 'Credit Card': self.fake.credit_card_number()
@@ -774,11 +809,13 @@ class ItalyFactory(PIIFactory):
     def __init__(self): super().__init__('it_IT')
     def generate_record(self):
         data = self.common_fields('Italy')
+        # generate Italy codice fiscale (simplified) using full name, birthdate and gender
+        cf = generate_codice_fiscale(data.get('Full Name', ''), data.get('Birthdate_dt'), data.get('Gender'))
         data.update({
             'Birthdate': self._format_birthdate_from_date(data.pop('Birthdate_dt'), 'Italy')
             , 'Race_Ethnicity': random.choice(['Mediterranean', 'Celtic', 'Germanic', 'Slavic', 'Asian', 'Indian', 'Other'])
             , 'National ID': self.fake.ssn()
-            , 'Tax ID': self.fake.ssn()
+            , 'Tax ID': cf
             , 'Bank Account': self.fake.iban()
             , 'Credit Card': self.fake.credit_card_number()
             , 'Passport': self.fake.bothify(text='??#######').upper()
@@ -798,8 +835,8 @@ class GermanyFactory(PIIFactory):
         data.update({
             'Birthdate': self._format_birthdate_from_date(data.pop('Birthdate_dt'), 'Germany')
             , 'Race_Ethnicity': random.choice(['Germanic', 'Caucasian', 'Asian', 'Indian', 'African', 'Other'])
-            , 'National ID': self.fake.ssn()
-            , 'Tax ID': self.fake.bothify("## ### ### ### #")
+            , 'National ID': generate_german_tin()
+            , 'Tax ID': generate_german_tin()
             , 'Bank Account': self.fake.iban()
             , 'Credit Card': self.fake.credit_card_number()
             , 'Passport': self.fake.bothify(text='#########').upper()
