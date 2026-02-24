@@ -1,0 +1,16 @@
+# Ignore generated datasets and logs
+synthetic_pii_data.csv
+crime_dataset.csv
+crime_narratives.txt
+narrative_stories.txt
+
+# Logs
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Editor/temp files
+.vscode/
+*.swp
